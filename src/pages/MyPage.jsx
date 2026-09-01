@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCircle, LogOut, ChevronRight, ShieldCheck, Bell, HelpCircle, User, Loader2 } from 'lucide-react';
+import { UserCircle, LogOut, ChevronRight, ShieldCheck, Bell, HelpCircle, User, Loader2, Wallet, History } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const MyPage = () => {
@@ -21,6 +21,8 @@ const MyPage = () => {
   }
 
   const menuItems = [
+    { icon: Wallet, label: '계좌 잔고', onClick: () => navigate('/app/balance') },
+    { icon: History, label: '거래 내역', onClick: () => navigate('/app/history') },
     { icon: User, label: '계정 정보', onClick: () => navigate('/app/account') },
     { icon: Bell, label: '알림 설정', onClick: () => {} },
     { icon: ShieldCheck, label: '보안 설정', onClick: () => {} },

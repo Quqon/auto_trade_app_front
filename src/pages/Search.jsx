@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search as SearchIcon, X, Clock, TrendingUp, ChevronRight, ArrowUpRight, ArrowDownRight, Flame } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Search as SearchIcon, X, Clock, TrendingUp, ChevronRight, ArrowUpRight, ArrowDownRight, Flame, Loader2 } from 'lucide-react';
 
 // 실시간 인기 종목 더미 데이터
 const HOT_STOCKS = [
@@ -18,13 +20,83 @@ const HOT_STOCKS = [
 const RECENT_KEY = 'recent_searches';
 
 const SearchPage = () => {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
+  const [popularStocks, setPopularStocks] = useState([]);
+  const [loadingStocks, setLoadingStocks] = useState(true);
 
-  // 최근 검색 불러오기
+  // 디바운스 처리: 사용자가 입력을 멈추고 300ms 후에 debouncedQuery 업데이트
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [query]);
+
+  // debouncedQuery가 변경될 때마다 백엔드 검색 API 호출
+  useEffect(() => {
+    const searchStocks = async () => {
+      if (!debouncedQuery.trim()) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+      
+      setIsSearching(true);
+      try {
+        const response = await axios.get(`/api/stocks/search?keyword=${encodeURIComponent(debouncedQuery)}`);
+        setSearchResults(response.data);
+      } catch (error) {
+        console.error('검색 실패:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+    
+    searchStocks();
+  }, [debouncedQuery]);
+
+  // 최근 검색 불러오기 및 실시간 인기 종목 조회
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
     setRecentSearches(stored);
+
+    const fetchPopularStocks = async () => {
+      try {
+        const response = await axios.get('/api/stocks/popular');
+        if (!response.data || response.data.length === 0) {
+          throw new Error("API returned empty data.");
+        }
+        
+        const mapped = response.data.map((item, index) => {
+          const changeRate = parseFloat(item.changeRate);
+          return {
+            rank: index + 1,
+            code: item.stockCode,
+            name: item.stockName,
+            price: parseInt(item.currentPrice, 10).toLocaleString(),
+            change: `${changeRate > 0 ? '+' : ''}${changeRate.toFixed(2)}%`,
+            up: changeRate > 0,
+          };
+        });
+        setPopularStocks(mapped);
+      } catch (error) {
+        console.error("인기 종목을 불러오는데 실패했습니다:", error);
+        setPopularStocks(HOT_STOCKS); // 에러 시 폴백(Mock) 사용
+      } finally {
+        setLoadingStocks(false);
+      }
+    };
+    
+    fetchPopularStocks();
   }, []);
 
   const saveSearch = (keyword) => {
@@ -46,15 +118,27 @@ const SearchPage = () => {
     setRecentSearches([]);
   };
 
+  const handleStockClick = (code, name) => {
+    saveSearch(name);
+    navigate(`/app/stock/${code}`);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    saveSearch(query);
-    setQuery('');
+    if (!query.trim()) return;
+    
+    if (searchResults.length > 0) {
+      const target = searchResults.find(s => s.name === query || s.code === query) || searchResults[0];
+      handleStockClick(target.code, target.name);
+    } else {
+      saveSearch(query);
+    }
   };
 
   const handleRecentClick = (keyword) => {
     setQuery(keyword);
-    saveSearch(keyword);
+    // 클릭 시 바로 이동하려면 code를 알아야 하는데, 
+    // 최근 검색어는 이름만 있으므로 자동완성을 열어줍니다.
   };
 
   return (
@@ -70,7 +154,7 @@ const SearchPage = () => {
       </header>
 
       {/* 검색 입력창 */}
-      <form onSubmit={handleSubmit} style={{ position: 'relative' }}>
+      <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 10 }}>
         <SearchIcon
           size={20}
           style={{
@@ -85,14 +169,17 @@ const SearchPage = () => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="종목명 또는 종목코드 검색"
+          placeholder="종목명 또는 종목코드 검색 (예: ㅎ, 삼성)"
           className="auth-input"
           style={{ paddingRight: query ? '44px' : '16px' }}
         />
         {query && (
           <button
             type="button"
-            onClick={() => setQuery('')}
+            onClick={() => {
+              setQuery('');
+              setSearchResults([]);
+            }}
             style={{
               position: 'absolute',
               right: '16px',
@@ -108,6 +195,56 @@ const SearchPage = () => {
           >
             <X size={18} />
           </button>
+        )}
+        
+        {/* 자동완성 드롭다운 */}
+        {query && (searchResults.length > 0 || isSearching) && (
+          <div 
+            className="glass-panel" 
+            style={{ 
+              position: 'absolute', 
+              top: '100%', 
+              left: 0, 
+              right: 0, 
+              marginTop: '8px', 
+              maxHeight: '300px', 
+              overflowY: 'auto', 
+              padding: '8px 0',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+              zIndex: 20
+            }}
+          >
+            {isSearching ? (
+              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <Loader2 className="spinner" size={20} style={{ display: 'inline-block' }} />
+              </div>
+            ) : (
+              searchResults.map((stock) => (
+                <div 
+                  key={stock.code}
+                  className="hover-dim"
+                  onClick={() => handleStockClick(stock.code, stock.name)}
+                  style={{
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
+                    {stock.name}
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {stock.code}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         )}
       </form>
 
@@ -194,25 +331,30 @@ const SearchPage = () => {
           </span>
         </div>
 
-        <div className="glass-panel" style={{ overflow: 'hidden' }}>
-          {HOT_STOCKS.map((stock, idx) => (
-            <div
-              key={stock.code}
-              className="hover-dim"
-              onClick={() => handleRecentClick(stock.name)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                padding: '14px 18px',
-                borderBottom: idx < HOT_STOCKS.length - 1 ? '1px solid var(--border-color)' : 'none',
-                cursor: 'pointer',
-                transition: 'background 0.15s ease',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              {/* 순위 */}
+        <div className="glass-panel" style={{ overflow: 'hidden', minHeight: '300px' }}>
+          {loadingStocks ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '40px 0' }}>
+              <Loader2 className="spinner" size={24} color="var(--accent)" />
+            </div>
+          ) : (
+            popularStocks.map((stock, idx) => (
+              <div
+                key={stock.code}
+                className="hover-dim"
+                onClick={() => handleStockClick(stock.code, stock.name)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '14px 18px',
+                  borderBottom: idx < popularStocks.length - 1 ? '1px solid var(--border-color)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                {/* 순위 */}
               <span style={{
                 width: '22px',
                 fontSize: '13px',
@@ -257,7 +399,8 @@ const SearchPage = () => {
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       </section>
     </div>

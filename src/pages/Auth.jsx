@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 // 아이콘이 있는 입력 필드 공통 컴포넌트
-const InputField = ({ label, icon: Icon, type = 'text', name, value, onChange, placeholder, required }) => (
+const InputField = ({ label, icon: Icon, type = 'text', name, value, onChange, onClick, placeholder, required }) => (
   <div>
     <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>
       {label}
@@ -17,6 +17,7 @@ const InputField = ({ label, icon: Icon, type = 'text', name, value, onChange, p
         name={name}
         value={value}
         onChange={onChange}
+        onClick={onClick}
         placeholder={placeholder}
         required={required}
         className="auth-input"
@@ -46,7 +47,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, checkAuth } = useAuth();
 
   const passwordMismatch = !isLogin && signupData.passwordConfirm && signupData.password !== signupData.passwordConfirm;
 
@@ -89,13 +90,16 @@ const Auth = () => {
       } else {
         const { passwordConfirm, ...payload } = signupData;
         await axios.post('/api/auth/signup', payload);
-        alert('회원가입이 완료되었습니다. 로그인해주세요.');
-        setIsLogin(true);
-        setSignupData(INITIAL_SIGNUP);
-        setError('');
+        await checkAuth();
+        alert('회원가입이 완료되어 자동 로그인되었습니다.');
+        navigate('/app');
       }
     } catch (err) {
-      setError(err.response?.data || '오류가 발생했습니다. 다시 시도해주세요.');
+      const errorData = err.response?.data;
+      const errorMessage = typeof errorData === 'string' 
+        ? errorData 
+        : (errorData?.message || '오류가 발생했습니다. 다시 시도해주세요.');
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -132,7 +136,11 @@ const Auth = () => {
         setForgotStep(1);
         setForgotData({ username: '', email: '', newPassword: '', newPasswordConfirm: '' });
       } catch (err) {
-        setError(err.response?.data || '오류가 발생했습니다. 다시 시도해주세요.');
+        const errorData = err.response?.data;
+        const errorMessage = typeof errorData === 'string' 
+          ? errorData 
+          : (errorData?.message || '오류가 발생했습니다. 다시 시도해주세요.');
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -293,7 +301,21 @@ const Auth = () => {
               <InputField label="이름" icon={User} name="name" value={signupData.name} onChange={handleSignupChange} placeholder="실명 입력" required />
               <InputField label="이메일" icon={Mail} type="email" name="email" value={signupData.email} onChange={handleSignupChange} placeholder="example@email.com" required />
               <InputField label="전화번호" icon={Phone} type="tel" name="phoneNumber" value={signupData.phoneNumber} onChange={handleSignupChange} placeholder="010-0000-0000" required />
-              <InputField label="생년월일" icon={Calendar} type="date" name="birthDate" value={signupData.birthDate} onChange={handleSignupChange} required />
+              <InputField 
+                label="생년월일" 
+                icon={Calendar} 
+                type="date" 
+                name="birthDate" 
+                value={signupData.birthDate} 
+                onChange={handleSignupChange} 
+                onClick={(e) => {
+                  // 브라우저에서 showPicker API를 지원하는 경우 달력(Date Picker)을 강제로 엽니다.
+                  if (typeof e.target.showPicker === 'function') {
+                    e.target.showPicker();
+                  }
+                }}
+                required 
+              />
 
               {/* 성별 선택 */}
               <div>

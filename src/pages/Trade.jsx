@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Activity, ShieldCheck, Zap, Hand } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Trade = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [currentMode, setCurrentMode] = useState('MANUAL');
   const [rates, setRates] = useState({
     AGGRESSIVE: 0,
@@ -33,12 +37,21 @@ const Trade = () => {
   };
 
   const handleModeChange = async (mode) => {
+    if (!user) {
+      navigate('/app/trade/detail/' + mode.toLowerCase());
+      return;
+    }
+    
     try {
       await axios.post('/api/preference/mode', { mode });
       setCurrentMode(mode);
     } catch (error) {
       console.error('모드 변경 실패:', error);
-      alert('설정 변경에 실패했습니다. 백엔드 서버가 켜져있는지 확인해주세요.');
+      if (error.response?.status === 401) {
+        alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+      } else {
+        alert('설정 변경에 실패했습니다. 백엔드 서버가 켜져있는지 확인해주세요.');
+      }
     }
   };
 
@@ -92,7 +105,7 @@ const Trade = () => {
           매매 전략 설정
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.5' }}>
-          선택한 성향에 따라 자동매매 시스템이<br/>가장 알맞은 타이밍에 거래를 진행합니다.
+          선택한 성향에 따라 자동매매 시스템이<br />가장 알맞은 타이밍에 거래를 진행합니다.
         </p>
       </header>
 
@@ -100,14 +113,14 @@ const Trade = () => {
         {investmentTypes.map((type) => {
           const isActive = currentMode === type.id;
           const expectedRate = rates[type.id] || 0;
-          
+
           return (
-            <div 
+            <div
               key={type.id}
               onClick={() => handleModeChange(type.id)}
               className={`glass-panel hover-scale ${isActive ? 'active-mode' : ''}`}
-              style={{ 
-                padding: '22px', 
+              style={{
+                padding: '22px',
                 cursor: 'pointer',
                 border: isActive ? `1px solid ${type.color}` : '1px solid var(--border-color)',
                 boxShadow: isActive ? `0 0 20px ${type.bg}` : 'none',
@@ -121,19 +134,19 @@ const Trade = () => {
                   현재 적용 중
                 </div>
               )}
-              
+
               <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                <div style={{ 
-                  width: '52px', height: '52px', 
-                  borderRadius: '16px', 
-                  background: type.bg, 
+                <div style={{
+                  width: '52px', height: '52px',
+                  borderRadius: '16px',
+                  background: type.bg,
                   color: type.color,
                   display: 'flex', justifyContent: 'center', alignItems: 'center',
                   flexShrink: 0
                 }}>
                   <type.icon size={26} strokeWidth={2.5} />
                 </div>
-                
+
                 <div style={{ flex: 1, marginTop: '2px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -141,13 +154,13 @@ const Trade = () => {
                         {type.name}
                       </h3>
                       {type.id !== 'MANUAL' && (
-                        <span style={{ 
-                          fontSize: '11px', 
-                          background: 'rgba(255,255,255,0.06)', 
-                          border: '1px solid var(--border-color)', 
-                          padding: '4px 8px', 
-                          borderRadius: '6px', 
-                          color: 'var(--text-secondary)' 
+                        <span style={{
+                          fontSize: '11px',
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '1px solid var(--border-color)',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          color: 'var(--text-secondary)'
                         }}>
                           예상 최대 투자기간: {type.period}
                         </span>
