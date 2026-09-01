@@ -12,6 +12,7 @@ import Account from './pages/Account';
 import Performance from './pages/Performance';
 import Balance from './pages/Balance';
 import History from './pages/History';
+import Survey from './pages/Survey';
 import OAuth2RedirectHandler from './pages/OAuth2RedirectHandler';
 import StockDetail from './pages/StockDetail';
 import { AuthProvider } from './contexts/AuthContext';
@@ -37,6 +38,7 @@ function App() {
             <Route path="trade/detail/:mode" element={<TradeDetail />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="stock/:code" element={<StockDetail />} />
+            <Route path="survey" element={<Survey />} />
             <Route path="performance" element={<Performance />} />
             <Route path="balance" element={<Balance />} />
             <Route path="history" element={<History />} />

@@ -109,6 +109,42 @@ const Trade = () => {
         </p>
       </header>
 
+      {/* 투자 성향 테스트 배너 */}
+      <section>
+        <div 
+          onClick={() => navigate('/app/survey')}
+          className="glass-panel hover-scale" 
+          style={{ 
+            padding: '20px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            cursor: 'pointer', 
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.05))', 
+            border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: '16px'
+          }}
+        >
+          <div>
+            <p style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: '700', marginBottom: '6px' }}>💡 어떤 전략이 좋을지 고민된다면?</p>
+            <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-primary)' }}>나만의 투자 성향 테스트하기</h3>
+          </div>
+          <button style={{ 
+            padding: '10px 16px', 
+            borderRadius: '10px', 
+            border: 'none', 
+            background: 'var(--accent)', 
+            color: '#fff', 
+            fontWeight: '600', 
+            fontSize: '13px', 
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+          }}>
+            시작하기
+          </button>
+        </div>
+      </section>
+
       <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {investmentTypes.map((type) => {
           const isActive = currentMode === type.id;
