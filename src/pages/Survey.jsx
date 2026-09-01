@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, CheckCircle2, ChevronRight, Activity, ShieldCheck, Zap, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const QUESTIONS = [
   {
@@ -70,12 +71,21 @@ const STRATEGIES = {
 };
 
 const Survey = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isFinished, setIsFinished] = useState(false);
   const [recommended, setRecommended] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    // 직접 URL을 치고 들어왔을 때 비로그인 상태면 로그인 화면으로 리다이렉트
+    if (user === null) {
+      alert('로그인이 필요한 서비스입니다.');
+      navigate('/auth', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSelectOption = (questionId, score) => {
     setAnswers(prev => ({ ...prev, [questionId]: score }));

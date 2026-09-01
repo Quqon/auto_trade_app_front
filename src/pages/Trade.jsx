@@ -112,7 +112,14 @@ const Trade = () => {
       {/* 투자 성향 테스트 배너 */}
       <section>
         <div 
-          onClick={() => navigate('/app/survey')}
+          onClick={() => {
+            if (!user) {
+              alert('로그인이 필요한 서비스입니다.');
+              navigate('/auth');
+              return;
+            }
+            navigate('/app/survey');
+          }}
           className="glass-panel hover-scale" 
           style={{ 
             padding: '20px', 
